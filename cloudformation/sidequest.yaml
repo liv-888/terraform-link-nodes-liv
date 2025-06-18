@@ -1,0 +1,85 @@
+Resources:
+
+  CyberVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.10.0.0/16
+      Tags:
+        - Key: Name
+          Value: cyber-vpc
+
+  SubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref CyberVPC
+      CidrBlock: 10.10.1.0/24
+      AvailabilityZone: eu-west-1a
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: subnet-a
+
+  SubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref CyberVPC
+      CidrBlock: 10.10.2.0/24
+      AvailabilityZone: eu-west-1b
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: subnet-b
+
+  InternalSSHSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH traffic only between subnet A and B
+      VpcId: !Ref CyberVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.10.1.0/24
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.10.2.0/24
+      Tags:
+        - Key: Name
+          Value: internal-ssh-sg
+
+  NodeAInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-058c23b612018797a  # Amazon Linux 2 in eu-west-1
+      InstanceType: t3.micro
+      SubnetId: !Ref SubnetA
+      SecurityGroupIds:
+        - !Ref InternalSSHSecurityGroup
+      KeyName: terraform-key
+      Tags:
+        - Key: Name
+          Value: NodeA
+
+  NodeBInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-058c23b612018797a
+      InstanceType: t3.micro
+      SubnetId: !Ref SubnetB
+      SecurityGroupIds:
+        - !Ref InternalSSHSecurityGroup
+      KeyName: terraform-key
+      Tags:
+        - Key: Name
+          Value: NodeB
+
+Outputs:
+
+  NodeAPrivateIP:
+    Description: Private IP of NodeA instance
+    Value: !GetAtt NodeAInstance.PrivateIp
+
+  NodeBPrivateIP:
+    Description: Private IP of NodeB instance
+    Value: !GetAtt NodeBInstance.PrivateIp
